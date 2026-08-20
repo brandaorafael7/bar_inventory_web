@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useStore } from '../contexts/StoreContext';
 import { Store, Lock, Mail, AlertCircle } from 'lucide-react';
@@ -92,6 +92,12 @@ export const Login: React.FC = () => {
             {isSubmitting ? 'Entrando...' : 'Entrar no Sistema'}
           </button>
         </form>
+<div className="mt-6 text-center text-sm text-slate-400">
+  Não possui uma conta?{' '}
+  <Link to="/register" className="text-amber-500 hover:underline font-medium">
+    Cadastre-se
+  </Link>
+</div>
       </div>
     </div>
   );
