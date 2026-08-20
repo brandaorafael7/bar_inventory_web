@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useStore } from '../contexts/StoreContext';
-import { Wine, Package, ArrowLeftRight, Tag, Users, Settings, LogOut, Store } from 'lucide-react';
+import { Package, ArrowLeftRight, Tag, Users, Settings, LogOut, Store } from 'lucide-react';
 
 export const Layout: React.FC = () => {
   const { user, logout } = useAuth();
