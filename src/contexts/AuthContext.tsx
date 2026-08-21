@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../services/api';
 
 export interface User {
+  id: string;
   name: string;
   email: string;
   role: 'ADMIN' | 'EMPLOYEE';
@@ -10,52 +11,68 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
   loading: boolean;
+  login: (email: string, pass: string) => Promise<void>;
+  register: (name: string, email: string, pass: string, adminKey?: string) => Promise<void>;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const register = async (name: string, email: string, password: string) => {
-  const res = await api.post('/auth/register', { name, email, password });
-  const { accessToken, user: loggedUser } = res.data;
-  localStorage.setItem('token', accessToken);
-  setUser(loggedUser);
-};
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storagedUser = localStorage.getItem('@bar_user');
-    const storagedToken = localStorage.getItem('@bar_token');
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
 
-    if (storagedUser && storagedToken) {
-      setUser(JSON.parse(storagedUser));
+    if (token && storedUser) {
+      setUser(JSON.parse(storedUser));
     }
     setLoading(false);
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const response = await api.post('/auth/login', { email, password });
+  const login = async (email: string, pass: string) => {
+    const response = await api.post('/auth/login', { email, password: pass });
     const { accessToken, user: loggedUser } = response.data;
 
-    localStorage.setItem('@bar_token', accessToken);
-    localStorage.setItem('@bar_user', JSON.stringify(loggedUser));
+    localStorage.setItem('token', accessToken);
+    localStorage.setItem('user', JSON.stringify(loggedUser));
+    setUser(loggedUser);
+  };
 
+  const register = async (name: string, email: string, pass: string, adminKey?: string) => {
+    const response = await api.post('/auth/register', {
+      name,
+      email,
+      password: pass,
+      adminKey,
+    });
+    const { accessToken, user: loggedUser } = response.data;
+
+    localStorage.setItem('token', accessToken);
+    localStorage.setItem('user', JSON.stringify(loggedUser));
     setUser(loggedUser);
   };
 
   const logout = () => {
-    localStorage.removeItem('@bar_token');
-    localStorage.removeItem('@bar_user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, register, logout, loading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        loading,
+        login,
+        register,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

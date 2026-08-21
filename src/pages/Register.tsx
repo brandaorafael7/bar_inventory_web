@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useStore } from '../contexts/StoreContext';
-import { Store, Lock, Mail, User, AlertCircle, ArrowRight } from 'lucide-react';
+import { Store, Lock, Mail, User, AlertCircle, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export const Register: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminKey, setAdminKey] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -33,7 +35,7 @@ export const Register: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      await register(name, email, password);
+      await register(name, email, password, isAdmin ? adminKey : undefined);
       navigate('/');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erro ao criar conta. Tente novamente.');
@@ -45,7 +47,7 @@ export const Register: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-slate-900 rounded-2xl shadow-2xl p-8 border border-slate-800">
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-500/10 border border-amber-500/20 rounded-2xl mb-4 overflow-hidden shadow-inner">
             {settings.logoUrl ? (
               <img src={settings.logoUrl} alt="Logo" className="w-full h-full object-cover" />
@@ -58,7 +60,7 @@ export const Register: React.FC = () => {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/20 rounded-lg flex items-center gap-3 text-rose-400 text-sm">
+          <div className="mb-5 p-4 bg-rose-500/10 border border-rose-500/20 rounded-lg flex items-center gap-3 text-rose-400 text-sm">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <span>{error}</span>
           </div>
@@ -66,7 +68,7 @@ export const Register: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Nome Completo</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Nome Completo</label>
             <div className="relative">
               <User className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
@@ -81,7 +83,7 @@ export const Register: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">E-mail</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">E-mail</label>
             <div className="relative">
               <Mail className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
@@ -96,7 +98,7 @@ export const Register: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Senha</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Senha</label>
             <div className="relative">
               <Lock className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
@@ -111,7 +113,7 @@ export const Register: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Confirmar Senha</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Confirmar Senha</label>
             <div className="relative">
               <Lock className="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
@@ -125,6 +127,36 @@ export const Register: React.FC = () => {
             </div>
           </div>
 
+          {/* Opção para Administrador */}
+          <div className="pt-2 border-t border-slate-800">
+            <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isAdmin}
+                onChange={(e) => setIsAdmin(e.target.checked)}
+                className="rounded bg-slate-950 border-slate-800 text-amber-500 focus:ring-0"
+              />
+              <span>Criar como Administrador (Dono / Gerente)</span>
+            </label>
+
+            {isAdmin && (
+              <div className="mt-3">
+                <label className="block text-xs font-medium text-amber-400 mb-1">Chave Secreta de Administrador</label>
+                <div className="relative">
+                  <ShieldCheck className="w-5 h-5 text-amber-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="password"
+                    required={isAdmin}
+                    value={adminKey}
+                    onChange={(e) => setAdminKey(e.target.value)}
+                    className="w-full bg-slate-950 border border-amber-500/50 rounded-lg pl-11 pr-4 py-2 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 text-sm"
+                    placeholder="Digite o PIN de administrador"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             type="submit"
             disabled={isSubmitting}
@@ -135,7 +167,7 @@ export const Register: React.FC = () => {
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-slate-400">
+        <div className="mt-5 text-center text-sm text-slate-400">
           Já possui uma conta?{' '}
           <Link to="/login" className="text-amber-500 hover:underline font-medium">
             Fazer login
