@@ -11,6 +11,7 @@ import {
   TrendingUp, 
   AlertTriangle, 
   Edit2, 
+  Trash2,
   X, 
   Check, 
   Layers
@@ -45,9 +46,13 @@ export const Products: React.FC = () => {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
 
-  // Estados de Modal de Produto
+  // Estados de Modal de Produto (Criar / Editar)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  // Estados de Modal de Exclusão
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Estados de Modal de Movimentação Rápida
   const [quickMovementProduct, setQuickMovementProduct] = useState<Product | null>(null);
@@ -157,6 +162,20 @@ export const Products: React.FC = () => {
     }
   };
 
+  const handleDeleteProduct = async () => {
+    if (!deletingProduct) return;
+    setIsDeleting(true);
+    try {
+      await api.delete(`/products/${deletingProduct._id}`);
+      setDeletingProduct(null);
+      fetchData();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Erro ao excluir produto.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleOpenQuickMovement = (product: Product, type: 'SALE' | 'ENTRY' | 'LOSS' | 'ADJUSTMENT') => {
     setQuickMovementProduct(product);
     setMovementType(type);
@@ -206,7 +225,6 @@ export const Products: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* Botão de Alternância de Tarifa Noturna */}
           <button
             onClick={() => setIsNightMode(!isNightMode)}
             className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold border transition ${
@@ -281,7 +299,7 @@ export const Products: React.FC = () => {
         </select>
       </div>
 
-      {/* Tabela de Produtos Responsiva */}
+      {/* Tabela de Produtos */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-300 min-w-[700px]">
@@ -345,7 +363,6 @@ export const Products: React.FC = () => {
                       </td>
                       <td className="px-5 py-4 text-center">
                         <div className="flex items-center justify-center gap-1.5">
-                          {/* Venda Rápida (-1) */}
                           <button
                             onClick={() => handleOpenQuickMovement(p, 'SALE')}
                             title="Registrar Venda / Saída"
@@ -354,7 +371,6 @@ export const Products: React.FC = () => {
                             <TrendingDown className="w-4 h-4" />
                           </button>
 
-                          {/* Entrada de Estoque (+1) */}
                           <button
                             onClick={() => handleOpenQuickMovement(p, 'ENTRY')}
                             title="Registrar Entrada"
@@ -363,7 +379,6 @@ export const Products: React.FC = () => {
                             <TrendingUp className="w-4 h-4" />
                           </button>
 
-                          {/* Perda / Avaria */}
                           <button
                             onClick={() => handleOpenQuickMovement(p, 'LOSS')}
                             title="Registrar Quebra / Perda"
@@ -372,15 +387,24 @@ export const Products: React.FC = () => {
                             <AlertTriangle className="w-4 h-4" />
                           </button>
 
-                          {/* Editar Produto */}
                           {user?.role === 'ADMIN' && (
-                            <button
-                              onClick={() => handleOpenEditModal(p)}
-                              title="Editar Produto"
-                              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition ml-1"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleOpenEditModal(p)}
+                                title="Editar Produto"
+                                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition ml-1"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+
+                              <button
+                                onClick={() => setDeletingProduct(p)}
+                                title="Excluir Produto"
+                                className="p-1.5 bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded-lg transition"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
@@ -392,6 +416,44 @@ export const Products: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Modal de Confirmação de Exclusão */}
+      {deletingProduct && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="font-bold text-rose-400 text-base flex items-center gap-2">
+                <Trash2 className="w-5 h-5" /> Excluir Produto
+              </h3>
+              <button onClick={() => setDeletingProduct(null)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-slate-300">
+              Tem certeza que deseja desativar e excluir o produto <strong className="text-white">"{deletingProduct.name}"</strong> do catálogo?
+            </p>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeletingProduct(null)}
+                className="flex-1 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-medium transition"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={handleDeleteProduct}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold rounded-lg text-sm transition"
+              >
+                {isDeleting ? 'Excluindo...' : 'Sim, Excluir'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Movimentação Rápida */}
       {quickMovementProduct && (
@@ -599,7 +661,6 @@ export const Products: React.FC = () => {
                 </div>
               </div>
 
-              {/* Venda Fracionada (Tabacaria) */}
               <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg space-y-2">
                 <label className="flex items-center gap-2 text-xs font-medium text-slate-300 cursor-pointer">
                   <input
