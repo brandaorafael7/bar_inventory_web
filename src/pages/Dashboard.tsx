@@ -8,7 +8,6 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Clock,
-  Layers,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -21,12 +20,10 @@ import {
 } from 'recharts';
 
 export const Dashboard: React.FC = () => {
-  const [loading, setLoading] = useState(true);
   const [productsCount, setProductsCount] = useState(0);
   const [lowStockCount, setLowStockCount] = useState(0);
   const [recentMovements, setRecentMovements] = useState<any[]>([]);
 
-  // Simulação de dados para o gráfico de fluxo semanal
   const chartData = [
     { dia: 'Seg', vendas: 420, entradas: 150 },
     { dia: 'Ter', vendas: 580, entradas: 0 },
@@ -40,7 +37,6 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        setLoading(true);
         const [prodRes, lowRes, movRes] = await Promise.all([
           api.get('/products'),
           api.get('/products/low-stock'),
@@ -52,8 +48,6 @@ export const Dashboard: React.FC = () => {
         setRecentMovements(movRes.data.slice(0, 5));
       } catch (err) {
         console.error('Erro ao carregar métricas:', err);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -62,7 +56,6 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Título & Subtítulo */}
       <div>
         <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">Painel de Desempenho</h1>
         <p className="text-zinc-500 text-xs md:text-sm mt-0.5">
@@ -70,9 +63,7 @@ export const Dashboard: React.FC = () => {
         </p>
       </div>
 
-      {/* Grade de Cards KPI (Estilo Spark Admin) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* KPI 1 */}
         <div className="bg-[#121215] border border-zinc-800/80 p-4 rounded-xl relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider font-mono">Itens Cadastrados</span>
@@ -89,7 +80,6 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI 2 */}
         <div className="bg-[#121215] border border-zinc-800/80 p-4 rounded-xl relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider font-mono">Estoque Crítico</span>
@@ -105,7 +95,6 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI 3 */}
         <div className="bg-[#121215] border border-zinc-800/80 p-4 rounded-xl relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider font-mono">Vendas Estimadas</span>
@@ -122,7 +111,6 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI 4 */}
         <div className="bg-[#121215] border border-zinc-800/80 p-4 rounded-xl relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider font-mono">Taxa de Quebra/Perda</span>
@@ -140,9 +128,7 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Área do Gráfico de Tendência & Movimentações Recentes */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Gráfico Sparkline Expandido */}
         <div className="lg:col-span-2 bg-[#121215] border border-zinc-800/80 p-5 rounded-xl">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -175,7 +161,6 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Últimas Movimentações */}
         <div className="bg-[#121215] border border-zinc-800/80 p-5 rounded-xl flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">

@@ -17,9 +17,6 @@ import {
   Bell,
   Search,
   ChevronDown,
-  AlertTriangle,
-  Moon,
-  Sun,
 } from 'lucide-react';
 
 interface LowStockItem {
@@ -41,7 +38,6 @@ export const Layout: React.FC = () => {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([]);
 
-  // Busca alertas de estoque crítico
   useEffect(() => {
     const fetchAlerts = async () => {
       try {
@@ -87,9 +83,8 @@ export const Layout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#09090B] text-zinc-100 flex flex-col antialiased selection:bg-amber-500/30 selection:text-amber-200">
-      {/* ================= TOPBAR SUPERIOR (SPARK ADMIN STYLE) ================= */}
+      {/* Topbar Superior */}
       <header className="sticky top-0 z-40 h-16 bg-[#121215] border-b border-zinc-800/80 px-4 md:px-6 flex items-center justify-between shadow-sm">
-        {/* Lado Esquerdo: Botão Mobile + Logo */}
         <div className="flex items-center gap-4">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -117,7 +112,6 @@ export const Layout: React.FC = () => {
           </div>
         </div>
 
-        {/* Centro: Barra de Pesquisa Rápida */}
         <div className="hidden md:flex items-center flex-1 max-w-md mx-8">
           <div className="relative w-full">
             <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -129,9 +123,8 @@ export const Layout: React.FC = () => {
           </div>
         </div>
 
-        {/* Lado Direito: Notificações & Perfil */}
         <div className="flex items-center gap-3">
-          {/* Sino de Notificações com Dropdown */}
+          {/* Sino de Notificações */}
           <div className="relative">
             <button
               onClick={() => {
@@ -149,7 +142,7 @@ export const Layout: React.FC = () => {
             </button>
 
             {notificationsOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-[#18181B] border border-zinc-800 rounded-xl shadow-2xl p-3 z-50 animate-in fade-in slide-in-from-top-2">
+              <div className="absolute right-0 mt-2 w-80 bg-[#18181B] border border-zinc-800 rounded-xl shadow-2xl p-3 z-50">
                 <div className="flex items-center justify-between pb-2 mb-2 border-b border-zinc-800 px-1">
                   <span className="text-xs font-bold text-white uppercase tracking-wider">Alertas de Estoque</span>
                   <span className="text-[10px] text-amber-500 font-medium font-mono">{lowStockItems.length} críticos</span>
@@ -175,7 +168,7 @@ export const Layout: React.FC = () => {
             )}
           </div>
 
-          {/* Perfil & Menu Dropdown */}
+          {/* Perfil */}
           <div className="relative">
             <button
               onClick={() => {
@@ -185,7 +178,7 @@ export const Layout: React.FC = () => {
               className="flex items-center gap-2.5 p-1.5 pl-2.5 bg-[#18181B] hover:bg-zinc-800 border border-zinc-800 rounded-lg transition"
             >
               <div className="w-6 h-6 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center font-bold text-xs">
-                {user?.name.charAt(0).toUpperCase()}
+                {user?.name?.charAt(0).toUpperCase() || 'U'}
               </div>
               <span className="text-xs font-medium text-zinc-300 hidden sm:inline max-w-[100px] truncate">
                 {user?.name}
@@ -215,9 +208,8 @@ export const Layout: React.FC = () => {
         </div>
       </header>
 
-      {/* ================= CORPO: SIDEBAR + CONTEÚDO ================= */}
+      {/* Sidebar + Main */}
       <div className="flex flex-1">
-        {/* Overlay Mobile */}
         {sidebarOpen && (
           <div
             onClick={() => setSidebarOpen(false)}
@@ -225,7 +217,6 @@ export const Layout: React.FC = () => {
           />
         )}
 
-        {/* Sidebar Lateral */}
         <aside
           className={`fixed md:sticky top-16 left-0 z-50 h-[calc(100vh-4rem)] w-64 bg-[#121215] border-r border-zinc-800/80 flex flex-col justify-between p-4 transition-transform duration-300 ease-in-out md:translate-x-0 ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
@@ -260,7 +251,6 @@ export const Layout: React.FC = () => {
             ))}
           </div>
 
-          {/* Card de Rodapé da Sidebar */}
           <div className="p-3 bg-[#18181B] border border-zinc-800 rounded-xl">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
@@ -270,7 +260,6 @@ export const Layout: React.FC = () => {
           </div>
         </aside>
 
-        {/* Conteúdo Principal */}
         <main className="flex-1 w-full min-w-0 p-4 md:p-8 overflow-y-auto">
           <Outlet />
         </main>
