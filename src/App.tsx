@@ -10,6 +10,7 @@ import { Categories } from './pages/Categories';
 import { Users } from './pages/Users';
 import { SettingsPage } from './pages/Settings';
 import { Register } from './pages/Register';
+import { Dashboard } from './pages/Dashboard';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({
   children,
@@ -75,6 +76,7 @@ export default function App() {
               />
             </Route>
             <Route path="/register" element={<Register />} />
+            <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
         </BrowserRouter>
       </StoreProvider>
