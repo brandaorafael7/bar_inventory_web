@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import {
   DollarSign,
@@ -8,6 +9,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Clock,
+  ArrowLeft,
+  ShoppingCart,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -20,6 +23,7 @@ import {
 } from 'recharts';
 
 export const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [productsCount, setProductsCount] = useState(0);
   const [lowStockCount, setLowStockCount] = useState(0);
   const [recentMovements, setRecentMovements] = useState<any[]>([]);
@@ -56,13 +60,25 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">Painel de Desempenho</h1>
-        <p className="text-zinc-500 text-xs md:text-sm mt-0.5">
-          Acompanhe os principais indicadores de fluxo do balcão e saúde do estoque
-        </p>
+      {/* Header com Botões de Retorno para o Balcão */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">Painel de Desempenho</h1>
+          <p className="text-zinc-500 text-xs md:text-sm mt-0.5">
+            Acompanhe os principais indicadores de fluxo do balcão e saúde do estoque
+          </p>
+        </div>
+
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold rounded-lg text-xs uppercase tracking-wider transition shadow-md shadow-amber-500/10 cursor-pointer"
+        >
+          <ShoppingCart className="w-4 h-4" />
+          <span>Voltar ao Balcão / Estoque</span>
+        </button>
       </div>
 
+      {/* Grade de Cards KPI */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-[#121215] border border-zinc-800/80 p-4 rounded-xl relative overflow-hidden shadow-sm">
           <div className="flex items-center justify-between">
@@ -128,6 +144,7 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Gráfico e Movimentações Recentes */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-[#121215] border border-zinc-800/80 p-5 rounded-xl">
           <div className="flex items-center justify-between mb-4">
@@ -196,6 +213,14 @@ export const Dashboard: React.FC = () => {
               )}
             </div>
           </div>
+
+          <button
+            onClick={() => navigate('/movements')}
+            className="w-full mt-4 flex items-center justify-center gap-1.5 p-2 bg-[#18181B] hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded-lg text-xs font-medium transition cursor-pointer"
+          >
+            <span>Ver Histórico Completo</span>
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
     </div>
