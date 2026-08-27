@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
-import { Tag, Plus, Trash2, X, AlertCircle } from 'lucide-react';
+import { Tag, Plus, Trash2, X, Check, Search } from 'lucide-react';
 
 interface Category {
   _id: string;
@@ -11,174 +11,173 @@ interface Category {
 export const Categories: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [error, setError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const loadCategories = async () => {
+  const fetchCategories = async () => {
     try {
       setLoading(true);
-      const res = await api.get<Category[]>('/categories');
+      const res = await api.get('/categories');
       setCategories(res.data);
-    } catch (err) {
-      console.error('Erro ao carregar categorias:', err);
+    } catch (err: any) {
+      console.error('Erro ao buscar categorias:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadCategories();
+    fetchCategories();
   }, []);
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSubmitting(true);
+    if (!name.trim()) return;
 
+    setIsSubmitting(true);
     try {
-      await api.post('/categories', {
-        name,
-        description: description || undefined,
-      });
-      setModalOpen(false);
+      await api.post('/categories', { name, description });
       setName('');
       setDescription('');
-      await loadCategories();
+      fetchCategories();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao criar categoria.');
+      alert(err.response?.data?.message || 'Erro ao criar categoria.');
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleDelete = async (id: string, catName: string) => {
-    if (!confirm(`Deseja realmente desativar a categoria "${catName}"?`)) return;
-
+  const handleDeleteCategory = async (id: string, catName: string) => {
+    if (!confirm(`Deseja realmente remover a categoria "${catName}"?`)) return;
     try {
       await api.delete(`/categories/${id}`);
-      await loadCategories();
+      fetchCategories();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erro ao remover categoria.');
+      alert(err.response?.data?.message || 'Erro ao excluir categoria.');
     }
   };
+
+  const filteredCategories = categories.filter((c) =>
+    c.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Categorias de Produtos</h1>
-          <p className="text-slate-400 text-sm">Organize seus produtos por seções (Cervejas, Tabacaria, Destilados, etc.)</p>
+      <div>
+        <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">Categorias de Produtos</h1>
+        <p className="text-zinc-500 text-xs md:text-sm mt-0.5">
+          Agrupamento para controle do balcão (Bebidas, Tabacaria, Destilados, etc.)
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Formulário de Criação */}
+        <div className="bg-[#121215] border border-zinc-800/80 p-5 rounded-xl h-fit shadow-sm">
+          <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+            <Plus className="w-4 h-4 text-amber-500" /> Nova Categoria
+          </h2>
+
+          <form onSubmit={handleCreateCategory} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase tracking-wider">
+                Nome da Categoria *
+              </label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ex: Cervejas Long Neck"
+                className="w-full bg-[#18181B] border border-zinc-800 rounded-lg px-3.5 py-2 text-white placeholder-zinc-600 focus:outline-none focus:border-amber-500 text-xs"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase tracking-wider">
+                Descrição (Opcional)
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                placeholder="Ex: Todas as cervejas em garrafa de vidro 330ml"
+                className="w-full bg-[#18181B] border border-zinc-800 rounded-lg px-3.5 py-2 text-white placeholder-zinc-600 focus:outline-none focus:border-amber-500 text-xs resize-none"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-zinc-950 font-bold py-2.5 rounded-lg transition text-xs uppercase tracking-wider shadow-md shadow-amber-500/10"
+            >
+              <Check className="w-4 h-4" />
+              <span>{isSubmitting ? 'Salvando...' : 'Adicionar Categoria'}</span>
+            </button>
+          </form>
         </div>
 
-        <button
-          onClick={() => {
-            setError('');
-            setModalOpen(true);
-          }}
-          className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-slate-950 px-4 py-2.5 rounded-lg font-semibold transition shadow-lg shadow-amber-500/20"
-        >
-          <Plus className="w-5 h-5" />
-          Nova Categoria
-        </button>
-      </div>
+        {/* Listagem */}
+        <div className="lg:col-span-2 space-y-3">
+          <div className="relative">
+            <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar categoria..."
+              className="w-full bg-[#121215] border border-zinc-800 rounded-lg pl-10 pr-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+            />
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {loading ? (
-          <p className="text-slate-500 col-span-full">Carregando categorias...</p>
-        ) : categories.length === 0 ? (
-          <p className="text-slate-500 col-span-full">Nenhuma categoria cadastrada.</p>
-        ) : (
-          categories.map((c) => (
-            <div
-              key={c._id}
-              className="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-start justify-between group hover:border-slate-700 transition shadow-lg"
-            >
-              <div className="flex items-start gap-3.5">
-                <div className="p-2.5 bg-amber-500/10 text-amber-400 rounded-lg">
-                  <Tag className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-white text-base">{c.name}</h3>
-                  <p className="text-xs text-slate-400 mt-1">{c.description || 'Sem descrição cadastrada.'}</p>
-                </div>
-              </div>
-
-              <button
-                onClick={() => handleDelete(c._id, c.name)}
-                title="Desativar Categoria"
-                className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          ))
-        )}
-      </div>
-
-      {modalOpen && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
-              <h3 className="text-lg font-bold text-white">Criar Nova Categoria</h3>
-              <button onClick={() => setModalOpen(false)} className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {error && (
-              <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg flex items-center gap-2 text-rose-400 text-xs">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Nome</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ex: Cervejas Artesanais"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Descrição (Opcional)</label>
-                <input
-                  type="text"
-                  placeholder="Ex: Long necks, latas e artesanais"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 font-semibold rounded-lg text-sm transition"
-                >
-                  {submitting ? 'Criando...' : 'Salvar'}
-                </button>
-              </div>
-            </form>
+          <div className="bg-[#121215] border border-zinc-800/80 rounded-xl overflow-hidden shadow-sm">
+            <table className="w-full text-left text-xs text-zinc-300">
+              <thead className="bg-[#09090B] text-zinc-400 uppercase border-b border-zinc-800 text-[11px] font-mono tracking-wider">
+                <tr>
+                  <th className="px-5 py-3.5">Nome</th>
+                  <th className="px-5 py-3.5">Descrição</th>
+                  <th className="px-5 py-3.5 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-800/60 font-sans">
+                {loading ? (
+                  <tr>
+                    <td colSpan={3} className="px-5 py-8 text-center text-zinc-500 font-mono">
+                      Carregando categorias...
+                    </td>
+                  </tr>
+                ) : filteredCategories.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="px-5 py-8 text-center text-zinc-500">
+                      Nenhuma categoria cadastrada.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredCategories.map((c) => (
+                    <tr key={c._id} className="hover:bg-[#18181B]/50 transition">
+                      <td className="px-5 py-3.5 font-semibold text-white flex items-center gap-2">
+                        <Tag className="w-3.5 h-3.5 text-amber-500" />
+                        <span>{c.name}</span>
+                      </td>
+                      <td className="px-5 py-3.5 text-zinc-400">{c.description || '—'}</td>
+                      <td className="px-5 py-3.5 text-right">
+                        <button
+                          onClick={() => handleDeleteCategory(c._id, c.name)}
+                          className="p-1.5 bg-zinc-900 hover:bg-rose-500/20 text-zinc-500 hover:text-rose-400 rounded-lg transition"
+                          title="Excluir Categoria"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

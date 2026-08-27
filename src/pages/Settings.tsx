@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../contexts/StoreContext';
-import { Store, Upload, Save, Phone, Trash2 } from 'lucide-react';
+import { Store, Upload, Save, Phone, MapPin, Trash2 } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
   const { settings, updateSettings } = useStore();
@@ -125,7 +125,6 @@ export const SettingsPage: React.FC = () => {
               />
             </div>
           </div>
-
           {success && (
             <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-xs">
               Configurações e logotipo atualizados com sucesso!
