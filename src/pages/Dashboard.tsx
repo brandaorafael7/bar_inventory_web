@@ -9,7 +9,6 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Clock,
-  ArrowLeft,
   ShoppingCart,
 } from 'lucide-react';
 import {
@@ -60,7 +59,7 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Topo com o Botão de Voltar ao Balcão em Destaque */}
+      {/* Topo com o Botão de Voltar ao Balcão */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#121215] border border-zinc-800/80 p-4 rounded-xl">
         <div>
           <h1 className="text-xl font-bold text-white tracking-tight">Painel de Desempenho</h1>
@@ -73,7 +72,6 @@ export const Dashboard: React.FC = () => {
           onClick={() => navigate('/')}
           className="flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold rounded-lg text-xs uppercase tracking-wider transition shadow-lg shadow-amber-500/20 cursor-pointer"
         >
-          <ArrowLeft className="w-4 h-4" />
           <ShoppingCart className="w-4 h-4" />
           <span>Voltar ao Balcão / Estoque</span>
         </button>
@@ -145,7 +143,7 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Gráficos e Atividades */}
+      {/* Gráficos e Atividades Recentes */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-[#121215] border border-zinc-800/80 p-5 rounded-xl">
           <div className="flex items-center justify-between mb-4">

@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, type FC, type FormEvent } from 'react';
 import { api } from '../services/api';
-import { Tag, Plus, Trash2, X, Check, Search } from 'lucide-react';
+import { Tag, Plus, Trash2, Check, Search } from 'lucide-react';
 
 interface Category {
   _id: string;
@@ -8,7 +8,7 @@ interface Category {
   description?: string;
 }
 
-export const Categories: React.FC = () => {
+export const Categories: FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -32,7 +32,7 @@ export const Categories: React.FC = () => {
     fetchCategories();
   }, []);
 
-  const handleCreateCategory = async (e: React.FormEvent) => {
+  const handleCreateCategory = async (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
@@ -73,7 +73,6 @@ export const Categories: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Formulário de Criação */}
         <div className="bg-[#121215] border border-zinc-800/80 p-5 rounded-xl h-fit shadow-sm">
           <h2 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
             <Plus className="w-4 h-4 text-amber-500" /> Nova Categoria
@@ -110,7 +109,7 @@ export const Categories: React.FC = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-zinc-950 font-bold py-2.5 rounded-lg transition text-xs uppercase tracking-wider shadow-md shadow-amber-500/10"
+              className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-zinc-950 font-bold py-2.5 rounded-lg transition text-xs uppercase tracking-wider shadow-md shadow-amber-500/10 cursor-pointer"
             >
               <Check className="w-4 h-4" />
               <span>{isSubmitting ? 'Salvando...' : 'Adicionar Categoria'}</span>
@@ -118,7 +117,6 @@ export const Categories: React.FC = () => {
           </form>
         </div>
 
-        {/* Listagem */}
         <div className="lg:col-span-2 space-y-3">
           <div className="relative">
             <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -164,7 +162,7 @@ export const Categories: React.FC = () => {
                       <td className="px-5 py-3.5 text-right">
                         <button
                           onClick={() => handleDeleteCategory(c._id, c.name)}
-                          className="p-1.5 bg-zinc-900 hover:bg-rose-500/20 text-zinc-500 hover:text-rose-400 rounded-lg transition"
+                          className="p-1.5 bg-zinc-900 hover:bg-rose-500/20 text-zinc-500 hover:text-rose-400 rounded-lg transition cursor-pointer"
                           title="Excluir Categoria"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -181,3 +179,5 @@ export const Categories: React.FC = () => {
     </div>
   );
 };
+
+export default Categories;

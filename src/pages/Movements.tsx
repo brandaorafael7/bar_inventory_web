@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, type FC } from 'react';
 import { api } from '../services/api';
 import { 
-  ArrowLeftRight, 
   TrendingDown, 
   TrendingUp, 
   AlertTriangle, 
@@ -28,7 +27,7 @@ interface Movement {
   createdAt: string;
 }
 
-export const Movements: React.FC = () => {
+export const Movements: FC = () => {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -98,7 +97,6 @@ export const Movements: React.FC = () => {
         </p>
       </div>
 
-      {/* Filtros */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -127,7 +125,6 @@ export const Movements: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabela de Histórico */}
       <div className="bg-[#121215] border border-zinc-800/80 rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-zinc-300 min-w-[700px]">
@@ -187,3 +184,5 @@ export const Movements: React.FC = () => {
     </div>
   );
 };
+
+export default Movements;
