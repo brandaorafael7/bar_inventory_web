@@ -1,20 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, type FC, type FormEvent } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  Package, 
-  Plus, 
-  Search, 
-  Moon, 
-  Sun, 
-  TrendingDown, 
-  TrendingUp, 
-  AlertTriangle, 
-  Edit2, 
+import {
+  Package,
+  Plus,
+  Search,
+  AlertTriangle,
+  Minus,
+  Edit2,
   Trash2,
-  X, 
-  Check, 
-  Layers
+  X,
+  Check,
+  Filter,
+  DollarSign,
+  Tag,
 } from 'lucide-react';
 
 interface Category {
@@ -25,68 +24,60 @@ interface Category {
 interface Product {
   _id: string;
   name: string;
-  category: Category;
   barcode?: string;
-  costPrice: number;
+  category: Category | null;
   dayPrice: number;
-  nightPrice?: number;
+  eventPrice: number;
+  costPrice: number;
   currentStock: number;
   minStock: number;
   unit: string;
-  isFractionable: boolean;
-  unitsPerPack?: number;
+  isActive: boolean;
 }
 
-export const Products: React.FC = () => {
+export const Products: FC = () => {
   const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isNightMode, setIsNightMode] = useState(false);
+
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
 
-  // Estados de Modal de Produto (Criar / Editar)
+  // Modais de Gestão
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  // Estados de Modal de Exclusão
-  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  // Form de Produto (Cadastro / Edição)
+  const [name, setName] = useState('');
+  const [barcode, setBarcode] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [dayPrice, setDayPrice] = useState('');
+  const [eventPrice, setEventPrice] = useState('');
+  const [costPrice, setCostPrice] = useState('');
+  const [currentStock, setCurrentStock] = useState('');
+  const [minStock, setMinStock] = useState('5');
+  const [unit, setUnit] = useState('un');
 
-  // Estados de Modal de Movimentação Rápida
-  const [quickMovementProduct, setQuickMovementProduct] = useState<Product | null>(null);
-  const [movementType, setMovementType] = useState<'SALE' | 'ENTRY' | 'LOSS' | 'ADJUSTMENT'>('SALE');
-  const [movementQuantity, setMovementQuantity] = useState(1);
+  // Form de Movimentação Rápida de Balcão
+  const [movementType, setMovementType] = useState<'SALE' | 'ENTRY' | 'LOSS'>('SALE');
+  const [movementQty, setMovementQty] = useState('1');
   const [movementReason, setMovementReason] = useState('');
-  const [submittingMovement, setSubmittingMovement] = useState(false);
-
-  // Formulário de Produto
-  const [formData, setFormData] = useState({
-    name: '',
-    categoryId: '',
-    barcode: '',
-    costPrice: '',
-    dayPrice: '',
-    nightPrice: '',
-    currentStock: '',
-    minStock: '5',
-    unit: 'un',
-    isFractionable: false,
-    unitsPerPack: '',
-  });
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [productsRes, categoriesRes] = await Promise.all([
-        api.get<Product[]>('/products'),
-        api.get<Category[]>('/categories'),
+      const [prodRes, catRes] = await Promise.all([
+        api.get('/products'),
+        api.get('/categories'),
       ]);
-      setProducts(productsRes.data);
-      setCategories(categoriesRes.data);
+      setProducts(prodRes.data);
+      setCategories(catRes.data);
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erro ao carregar produtos.');
+      console.error('Erro ao carregar catálogo:', err);
     } finally {
       setLoading(false);
     }
@@ -96,318 +87,334 @@ export const Products: React.FC = () => {
     fetchData();
   }, []);
 
-  const handleOpenCreateModal = () => {
-    setEditingProduct(null);
-    setFormData({
-      name: '',
-      categoryId: categories[0]?._id || '',
-      barcode: '',
-      costPrice: '',
-      dayPrice: '',
-      nightPrice: '',
-      currentStock: '0',
-      minStock: '5',
-      unit: 'un',
-      isFractionable: false,
-      unitsPerPack: '',
-    });
+  const handleOpenProductModal = (prod?: Product) => {
+    if (prod) {
+      setSelectedProduct(prod);
+      setName(prod.name);
+      setBarcode(prod.barcode || '');
+      setCategoryId(prod.category?._id || '');
+      setDayPrice(prod.dayPrice.toString());
+      setEventPrice(prod.eventPrice.toString());
+      setCostPrice(prod.costPrice.toString());
+      setCurrentStock(prod.currentStock.toString());
+      setMinStock(prod.minStock.toString());
+      setUnit(prod.unit || 'un');
+    } else {
+      setSelectedProduct(null);
+      setName('');
+      setBarcode('');
+      setCategoryId(categories[0]?._id || '');
+      setDayPrice('');
+      setEventPrice('');
+      setCostPrice('');
+      setCurrentStock('');
+      setMinStock('5');
+      setUnit('un');
+    }
     setIsModalOpen(true);
   };
 
-  const handleOpenEditModal = (product: Product) => {
-    setEditingProduct(product);
-    setFormData({
-      name: product.name,
-      categoryId: product.category?._id || '',
-      barcode: product.barcode || '',
-      costPrice: String(product.costPrice),
-      dayPrice: String(product.dayPrice),
-      nightPrice: product.nightPrice ? String(product.nightPrice) : '',
-      currentStock: String(product.currentStock),
-      minStock: String(product.minStock),
-      unit: product.unit || 'un',
-      isFractionable: product.isFractionable || false,
-      unitsPerPack: product.unitsPerPack ? String(product.unitsPerPack) : '',
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleSaveProduct = async (e: React.FormEvent) => {
+  const handleSaveProduct = async (e: FormEvent) => {
     e.preventDefault();
-    try {
-      const payload = {
-        name: formData.name,
-        category: formData.categoryId,
-        barcode: formData.barcode || undefined,
-        costPrice: Number(formData.costPrice),
-        dayPrice: Number(formData.dayPrice),
-        nightPrice: formData.nightPrice ? Number(formData.nightPrice) : undefined,
-        currentStock: Number(formData.currentStock),
-        minStock: Number(formData.minStock),
-        unit: formData.unit,
-        isFractionable: formData.isFractionable,
-        unitsPerPack: formData.isFractionable && formData.unitsPerPack ? Number(formData.unitsPerPack) : undefined,
-      };
+    setIsSubmitting(true);
 
-      if (editingProduct) {
-        await api.patch(`/products/${editingProduct._id}`, payload);
+    const payload = {
+      name,
+      barcode: barcode || undefined,
+      category: categoryId || undefined,
+      dayPrice: parseFloat(dayPrice) || 0,
+      eventPrice: parseFloat(eventPrice) || 0,
+      costPrice: parseFloat(costPrice) || 0,
+      currentStock: parseInt(currentStock, 10) || 0,
+      minStock: parseInt(minStock, 10) || 0,
+      unit,
+    };
+
+    try {
+      if (selectedProduct) {
+        await api.patch(`/products/${selectedProduct._id}`, payload);
       } else {
         await api.post('/products', payload);
       }
-
       setIsModalOpen(false);
       fetchData();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Erro ao salvar produto.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleDeleteProduct = async () => {
-    if (!deletingProduct) return;
-    setIsDeleting(true);
+  const handleDeleteProduct = async (id: string, prodName: string) => {
+    if (!confirm(`Deseja realmente desativar o produto "${prodName}"?`)) return;
     try {
-      await api.delete(`/products/${deletingProduct._id}`);
-      setDeletingProduct(null);
+      await api.delete(`/products/${id}`);
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erro ao excluir produto.');
-    } finally {
-      setIsDeleting(false);
+      alert(err.response?.data?.message || 'Erro ao remover produto.');
     }
   };
 
-  const handleOpenQuickMovement = (product: Product, type: 'SALE' | 'ENTRY' | 'LOSS' | 'ADJUSTMENT') => {
-    setQuickMovementProduct(product);
+  const handleOpenMovementModal = (prod: Product, type: 'SALE' | 'ENTRY' | 'LOSS') => {
+    setSelectedProduct(prod);
     setMovementType(type);
-    setMovementQuantity(1);
+    setMovementQty('1');
     setMovementReason('');
+    setIsMovementModalOpen(true);
   };
 
-  const handleConfirmMovement = async (e: React.FormEvent) => {
+  const handleSaveMovement = async (e: FormEvent) => {
     e.preventDefault();
-    if (!quickMovementProduct) return;
+    if (!selectedProduct) return;
 
-    setSubmittingMovement(true);
+    setIsSubmitting(true);
     try {
       await api.post('/stock-movements', {
-        product: quickMovementProduct._id,
+        productId: selectedProduct._id,
         type: movementType,
-        quantity: Number(movementQuantity),
+        quantity: parseInt(movementQty, 10) || 1,
         reason: movementReason || undefined,
       });
-
-      setQuickMovementProduct(null);
+      setIsMovementModalOpen(false);
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erro ao registrar movimentação.');
+      alert(err.response?.data?.message || 'Erro ao registrar operação.');
     } finally {
-      setSubmittingMovement(false);
+      setIsSubmitting(false);
     }
   };
 
-  const filteredProducts = products.filter((item) => {
-    const matchesSearch =
-      item.name.toLowerCase().includes(search.toLowerCase()) ||
-      (item.barcode && item.barcode.includes(search));
-    const matchesCat = selectedCategory ? item.category?._id === selectedCategory : true;
-    return matchesSearch && matchesCat;
-  });
+  // Venda Rápida de Balcão (1 Clique: -1 un)
+  const handleQuickSale = async (prod: Product) => {
+    if (prod.currentStock <= 0) {
+      alert('Produto sem estoque disponível!');
+      return;
+    }
 
-  const lowStockCount = products.filter((p) => p.currentStock <= p.minStock).length;
+    try {
+      await api.post('/stock-movements', {
+        productId: prod._id,
+        type: 'SALE',
+        quantity: 1,
+        reason: 'Saída rápida no balcão',
+      });
+      fetchData();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Erro ao registrar saída.');
+    }
+  };
+
+  const filteredProducts = products.filter((p) => {
+    const matchesSearch =
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      (p.barcode && p.barcode.includes(search));
+    const matchesCat = selectedCategory ? p.category?._id === selectedCategory : true;
+    const matchesLow = showLowStockOnly ? p.currentStock <= p.minStock : true;
+    return matchesSearch && matchesCat && matchesLow;
+  });
 
   return (
     <div className="space-y-6">
-      {/* Topo / Header com Ações */}
+      {/* Cabeçalho */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Controle de Estoque & Balcão</h1>
-          <p className="text-slate-400 text-sm">Gerencie o saldo e registre saídas rápidas</p>
+          <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">Estoque & Balcão</h1>
+          <p className="text-zinc-500 text-xs md:text-sm mt-0.5">
+            Gestão operacional em tempo real de produtos, saídas de balcão e conferência
+          </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        {user?.role === 'ADMIN' && (
           <button
-            onClick={() => setIsNightMode(!isNightMode)}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold border transition ${
-              isNightMode
-                ? 'bg-purple-950/40 border-purple-500/40 text-purple-300 shadow-md shadow-purple-950/50'
-                : 'bg-slate-900 border-slate-800 text-slate-300 hover:bg-slate-800'
-            }`}
+            onClick={() => handleOpenProductModal()}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold rounded-lg text-xs uppercase tracking-wider transition shadow-md shadow-amber-500/10 cursor-pointer"
           >
-            {isNightMode ? <Moon className="w-4 h-4 text-purple-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
-            <span>{isNightMode ? 'Tarifa Madrugada (Ativa)' : 'Tarifa Normal Diurna'}</span>
+            <Plus className="w-4 h-4" />
+            <span>Novo Produto</span>
           </button>
-
-          {user?.role === 'ADMIN' && (
-            <button
-              onClick={handleOpenCreateModal}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold rounded-lg text-sm transition shadow-lg shadow-amber-500/20"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Novo Produto</span>
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
-      {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-            <Package className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-medium">Total de Produtos</p>
-            <p className="text-2xl font-bold text-white">{products.length}</p>
-          </div>
-        </div>
-
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-            <AlertTriangle className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-slate-400 font-medium">Itens com Estoque Baixo</p>
-            <p className="text-2xl font-bold text-white">{lowStockCount}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Filtros de Pesquisa */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+      {/* Barra de Filtros e Busca */}
+      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+        <div className="sm:col-span-6 relative">
+          <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome ou código de barras..."
-            className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+            placeholder="Buscar por nome do item ou código de barras..."
+            className="w-full bg-[#121215] border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
           />
         </div>
 
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
-        >
-          <option value="">Todas as Categorias</option>
-          {categories.map((cat) => (
-            <option key={cat._id} value={cat._id}>
-              {cat.name}
-            </option>
-          ))}
-        </select>
+        <div className="sm:col-span-3">
+          <div className="relative">
+            <Filter className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full bg-[#121215] border border-zinc-800 rounded-lg pl-9 pr-3 py-2.5 text-xs text-zinc-300 focus:outline-none focus:border-amber-500"
+            >
+              <option value="">Todas as Categorias</option>
+              {categories.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="sm:col-span-3 flex items-center">
+          <button
+            onClick={() => setShowLowStockOnly(!showLowStockOnly)}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border text-xs font-medium transition cursor-pointer ${
+              showLowStockOnly
+                ? 'bg-amber-500/10 border-amber-500/40 text-amber-400 font-semibold'
+                : 'bg-[#121215] border-zinc-800 text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <AlertTriangle className="w-4 h-4 text-amber-500" />
+            <span>Apenas Estoque Baixo</span>
+          </button>
+        </div>
       </div>
 
-      {/* Tabela de Produtos */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+      {/* Grid de Balcão / Tabela Unificada */}
+      <div className="bg-[#121215] border border-zinc-800/80 rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-300 min-w-[700px]">
-            <thead className="bg-slate-950/60 text-slate-400 text-xs uppercase border-b border-slate-800 font-semibold">
+          <table className="w-full text-left text-xs text-zinc-300 min-w-[850px]">
+            <thead className="bg-[#09090B] text-zinc-400 uppercase border-b border-zinc-800 text-[11px] font-mono tracking-wider">
               <tr>
-                <th className="px-5 py-3.5">Produto</th>
+                <th className="px-5 py-3.5">Item / Detalhes</th>
                 <th className="px-5 py-3.5">Categoria</th>
-                <th className="px-5 py-3.5 text-center">Estoque Atual</th>
-                <th className="px-5 py-3.5 text-right">Preço em Vigência</th>
-                <th className="px-5 py-3.5 text-center">Ações de Balcão</th>
+                <th className="px-5 py-3.5 text-right">Preço Dia</th>
+                <th className="px-5 py-3.5 text-right">Preço Evento</th>
+                <th className="px-5 py-3.5 text-center">Nível de Estoque</th>
+                <th className="px-5 py-3.5 text-center">Saída Rápida</th>
+                {user?.role === 'ADMIN' && <th className="px-5 py-3.5 text-right">Ações</th>}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-zinc-800/60 font-sans">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-slate-500">
-                    Carregando estoque...
+                  <td colSpan={7} className="px-5 py-8 text-center text-zinc-500 font-mono">
+                    Carregando estoque do balcão...
                   </td>
                 </tr>
               ) : filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-8 text-center text-slate-500">
-                    Nenhum produto encontrado.
+                  <td colSpan={7} className="px-5 py-8 text-center text-zinc-500">
+                    Nenhum produto localizado com os filtros selecionados.
                   </td>
                 </tr>
               ) : (
                 filteredProducts.map((p) => {
-                  const currentPrice = isNightMode && p.nightPrice ? p.nightPrice : p.dayPrice;
                   const isLow = p.currentStock <= p.minStock;
-
                   return (
-                    <tr key={p._id} className="hover:bg-slate-800/40 transition">
-                      <td className="px-5 py-4">
-                        <div className="font-semibold text-white">{p.name}</div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          {p.barcode && <span className="text-[11px] text-slate-500 font-mono">EAN: {p.barcode}</span>}
-                          {p.isFractionable && (
-                            <span className="inline-flex items-center gap-0.5 text-[10px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20">
-                              <Layers className="w-3 h-3" /> Fracionável ({p.unitsPerPack} un)
-                            </span>
-                          )}
+                    <tr key={p._id} className="hover:bg-[#18181B]/50 transition">
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-[#18181B] border border-zinc-800 flex items-center justify-center flex-shrink-0">
+                            <Package className="w-4 h-4 text-zinc-400" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-white leading-tight">{p.name}</p>
+                            {p.barcode && (
+                              <p className="font-mono text-[10px] text-zinc-500 mt-0.5">{p.barcode}</p>
+                            )}
+                          </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-slate-400">{p.category?.name || 'Sem categoria'}</td>
-                      <td className="px-5 py-4 text-center">
-                        <span
-                          className={`inline-block font-mono text-xs px-2.5 py-1 rounded-full font-bold ${
-                            isLow
-                              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          }`}
-                        >
-                          {p.currentStock} {p.unit}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-right font-bold text-white">
-                        R$ {Number(currentPrice).toFixed(2)}
-                        {isNightMode && p.nightPrice && (
-                          <span className="block text-[10px] text-purple-400 font-normal">T. Madrugada</span>
+
+                      <td className="px-5 py-3.5">
+                        {p.category ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-400 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded">
+                            <Tag className="w-3 h-3 text-amber-500" />
+                            {p.category.name}
+                          </span>
+                        ) : (
+                          <span className="text-zinc-600 italic">Sem categoria</span>
                         )}
                       </td>
-                      <td className="px-5 py-4 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            onClick={() => handleOpenQuickMovement(p, 'SALE')}
-                            title="Registrar Venda / Saída"
-                            className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-lg transition"
+
+                      <td className="px-5 py-3.5 text-right font-mono font-semibold text-white">
+                        R$ {p.dayPrice.toFixed(2)}
+                      </td>
+
+                      <td className="px-5 py-3.5 text-right font-mono text-zinc-400">
+                        R$ {p.eventPrice.toFixed(2)}
+                      </td>
+
+                      <td className="px-5 py-3.5 text-center">
+                        <div className="inline-flex flex-col items-center">
+                          <span
+                            className={`font-mono font-bold px-2.5 py-0.5 rounded text-xs ${
+                              isLow
+                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                                : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            }`}
                           >
-                            <TrendingDown className="w-4 h-4" />
-                          </button>
-
-                          <button
-                            onClick={() => handleOpenQuickMovement(p, 'ENTRY')}
-                            title="Registrar Entrada"
-                            className="p-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-lg transition"
-                          >
-                            <TrendingUp className="w-4 h-4" />
-                          </button>
-
-                          <button
-                            onClick={() => handleOpenQuickMovement(p, 'LOSS')}
-                            title="Registrar Quebra / Perda"
-                            className="p-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-lg transition"
-                          >
-                            <AlertTriangle className="w-4 h-4" />
-                          </button>
-
-                          {user?.role === 'ADMIN' && (
-                            <>
-                              <button
-                                onClick={() => handleOpenEditModal(p)}
-                                title="Editar Produto"
-                                className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition ml-1"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-
-                              <button
-                                onClick={() => setDeletingProduct(p)}
-                                title="Excluir Produto"
-                                className="p-1.5 bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 rounded-lg transition"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </>
-                          )}
+                            {p.currentStock} {p.unit}
+                          </span>
+                          <span className="text-[10px] text-zinc-500 font-mono mt-0.5">
+                            Mín: {p.minStock} {p.unit}
+                          </span>
                         </div>
                       </td>
+
+                      {/* Botão de Saída Rápida (Baixa instantânea de balcão) */}
+                      <td className="px-5 py-3.5 text-center">
+                        <div className="inline-flex items-center gap-1.5">
+                          <button
+                            onClick={() => handleQuickSale(p)}
+                            title="Venda Rápida (-1 un)"
+                            disabled={p.currentStock <= 0}
+                            className="flex items-center gap-1 px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-black border border-amber-500/20 font-bold rounded-lg text-xs transition disabled:opacity-30 disabled:pointer-events-none cursor-pointer"
+                          >
+                            <Minus className="w-3 h-3" />
+                            <span>1 {p.unit}</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleOpenMovementModal(p, 'SALE')}
+                            title="Registrar quantidade específica"
+                            className="p-1 text-zinc-500 hover:text-zinc-200 bg-zinc-900 border border-zinc-800 rounded-lg hover:border-zinc-700 transition cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+
+                      {/* Ações Administrativas */}
+                      {user?.role === 'ADMIN' && (
+                        <td className="px-5 py-3.5 text-right">
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              onClick={() => handleOpenMovementModal(p, 'ENTRY')}
+                              title="Adicionar Estoque"
+                              className="p-1.5 text-emerald-400 hover:bg-emerald-500/10 bg-zinc-900 border border-zinc-800 rounded-lg transition cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleOpenProductModal(p)}
+                              title="Editar Produto"
+                              className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 bg-zinc-900 border border-zinc-800 rounded-lg transition cursor-pointer"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteProduct(p._id, p.name)}
+                              title="Desativar Produto"
+                              className="p-1.5 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 bg-zinc-900 border border-zinc-800 rounded-lg transition cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })
@@ -417,151 +424,48 @@ export const Products: React.FC = () => {
         </div>
       </div>
 
-      {/* Modal de Confirmação de Exclusão */}
-      {deletingProduct && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="font-bold text-rose-400 text-base flex items-center gap-2">
-                <Trash2 className="w-5 h-5" /> Excluir Produto
-              </h3>
-              <button onClick={() => setDeletingProduct(null)} className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <p className="text-sm text-slate-300">
-              Tem certeza que deseja desativar e excluir o produto <strong className="text-white">"{deletingProduct.name}"</strong> do catálogo?
-            </p>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setDeletingProduct(null)}
-                className="flex-1 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-medium transition"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={handleDeleteProduct}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold rounded-lg text-sm transition"
-              >
-                {isDeleting ? 'Excluindo...' : 'Sim, Excluir'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Movimentação Rápida */}
-      {quickMovementProduct && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="font-bold text-white text-base">
-                {movementType === 'SALE' && '🛒 Registrar Venda'}
-                {movementType === 'ENTRY' && '📥 Entrada de Estoque'}
-                {movementType === 'LOSS' && '⚠️ Perda / Quebra'}
-                {movementType === 'ADJUSTMENT' && '🔧 Ajuste de Balanço'}
-              </h3>
-              <button onClick={() => setQuickMovementProduct(null)} className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <p className="text-sm text-slate-300">
-              Produto: <span className="font-bold text-amber-400">{quickMovementProduct.name}</span>
-            </p>
-
-            <form onSubmit={handleConfirmMovement} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1">
-                  Quantidade ({quickMovementProduct.unit})
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  required
-                  value={movementQuantity}
-                  onChange={(e) => setMovementQuantity(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              {movementType !== 'SALE' && (
-                <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">Motivo (Opcional)</label>
-                  <input
-                    type="text"
-                    value={movementReason}
-                    onChange={(e) => setMovementReason(e.target.value)}
-                    placeholder="Ex: Garrafa trincada no transporte"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-              )}
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setQuickMovementProduct(null)}
-                  className="flex-1 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-medium transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingMovement}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-slate-950 font-bold rounded-lg text-sm transition"
-                >
-                  <Check className="w-4 h-4" />
-                  {submittingMovement ? 'Salvando...' : 'Confirmar'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Cadastro / Edição de Produto */}
+      {/* MODAL: Cadastro / Edição de Produto */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 my-8">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="font-bold text-white text-lg">
-                {editingProduct ? 'Editar Produto' : 'Cadastrar Novo Produto'}
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-[#121215] border border-zinc-800 rounded-xl p-6 w-full max-w-lg shadow-2xl">
+            <div className="flex items-center justify-between pb-4 border-b border-zinc-800 mb-4">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                {selectedProduct ? 'Editar Produto' : 'Novo Produto'}
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" />
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-zinc-500 hover:text-white p-1 rounded-lg"
+              >
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleSaveProduct} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Nome do Produto *</label>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase tracking-wider">
+                  Nome do Produto *
+                </label>
                 <input
                   type="text"
                   required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ex: Cerveja Heineken 330ml / Cigarro Lucky Strike"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ex: Cerveja Heineken Long Neck 330ml"
+                  className="w-full bg-[#18181B] border border-zinc-800 rounded-lg px-3.5 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Categoria *</label>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase tracking-wider">
+                    Categoria
+                  </label>
                   <select
-                    required
-                    value={formData.categoryId}
-                    onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500"
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                    className="w-full bg-[#18181B] border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
                   >
-                    <option value="" disabled>Selecione</option>
+                    <option value="">Sem Categoria</option>
                     {categories.map((c) => (
                       <option key={c._id} value={c._id}>
                         {c.name}
@@ -571,137 +475,203 @@ export const Products: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Código de Barras (EAN)</label>
-                  <input
-                    type="text"
-                    value={formData.barcode}
-                    onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                    placeholder="7891234567890"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500"
-                  />
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase tracking-wider">
+                    Unidade de Medida
+                  </label>
+                  <select
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value)}
+                    className="w-full bg-[#18181B] border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="un">Unidade (un)</option>
+                    <option value="lata">Lata</option>
+                    <option value="garrafa">Garrafa</option>
+                    <option value="dose">Dose</option>
+                    <option value="maco">Maço</option>
+                  </select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Preço de Custo (R$) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={formData.costPrice}
-                    onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
-                    placeholder="5.50"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500 font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Preço Diurno (R$) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={formData.dayPrice}
-                    onChange={(e) => setFormData({ ...formData, dayPrice: e.target.value })}
-                    placeholder="9.00"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500 font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-purple-400 mb-1">Preço Madrugada (R$)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.nightPrice}
-                    onChange={(e) => setFormData({ ...formData, nightPrice: e.target.value })}
-                    placeholder="11.00"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-purple-500 font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Estoque Inicial *</label>
-                  <input
-                    type="number"
-                    step="1"
-                    required
-                    value={formData.currentStock}
-                    onChange={(e) => setFormData({ ...formData, currentStock: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500 font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Estoque Mínimo</label>
-                  <input
-                    type="number"
-                    step="1"
-                    value={formData.minStock}
-                    onChange={(e) => setFormData({ ...formData, minStock: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500 font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Unidade</label>
-                  <input
-                    type="text"
-                    value={formData.unit}
-                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                    placeholder="un, dose, maço"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-              </div>
-
-              <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg space-y-2">
-                <label className="flex items-center gap-2 text-xs font-medium text-slate-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.isFractionable}
-                    onChange={(e) => setFormData({ ...formData, isFractionable: e.target.checked })}
-                    className="rounded bg-slate-900 border-slate-700 text-amber-500 focus:ring-0"
-                  />
-                  <span>Permitir venda fracionada (ex: maço vendido por unidade/cigarro avulso)</span>
-                </label>
-
-                {formData.isFractionable && (
-                  <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Unidades por Pacote/Maço</label>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase tracking-wider">
+                    Preço de Custo
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="w-3.5 h-3.5 text-zinc-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="number"
-                      step="1"
-                      min="1"
-                      value={formData.unitsPerPack}
-                      onChange={(e) => setFormData({ ...formData, unitsPerPack: e.target.value })}
-                      placeholder="Ex: 20 (cigarros por maço)"
-                      className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-white text-xs font-mono"
+                      step="0.01"
+                      value={costPrice}
+                      onChange={(e) => setCostPrice(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full bg-[#18181B] border border-zinc-800 rounded-lg pl-8 pr-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-amber-500"
                     />
                   </div>
-                )}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase tracking-wider">
+                    Preço Dia *
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="w-3.5 h-3.5 text-zinc-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      value={dayPrice}
+                      onChange={(e) => setDayPrice(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full bg-[#18181B] border border-zinc-800 rounded-lg pl-8 pr-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase tracking-wider">
+                    Preço Evento
+                  </label>
+                  <div className="relative">
+                    <DollarSign className="w-3.5 h-3.5 text-zinc-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={eventPrice}
+                      onChange={(e) => setEventPrice(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full bg-[#18181B] border border-zinc-800 rounded-lg pl-8 pr-3 py-2 text-white text-xs font-mono focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase tracking-wider">
+                    Estoque Inicial / Atual *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    value={currentStock}
+                    onChange={(e) => setCurrentStock(e.target.value)}
+                    placeholder="0"
+                    className="w-full bg-[#18181B] border border-zinc-800 rounded-lg px-3.5 py-2 text-white text-xs font-mono focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase tracking-wider">
+                    Estoque Mínimo (Alerta)
+                  </label>
+                  <input
+                    type="number"
+                    value={minStock}
+                    onChange={(e) => setMinStock(e.target.value)}
+                    placeholder="5"
+                    className="w-full bg-[#18181B] border border-zinc-800 rounded-lg px-3.5 py-2 text-white text-xs font-mono focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-zinc-800 flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm font-medium transition"
+                  className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-lg text-xs font-medium transition cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex items-center gap-2 px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg text-sm transition"
+                  disabled={isSubmitting}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold rounded-lg text-xs uppercase tracking-wider transition shadow-md shadow-amber-500/10 cursor-pointer"
                 >
-                  <Check className="w-4 h-4" />
-                  Salvar Produto
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{isSubmitting ? 'Salvando...' : 'Salvar Item'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Movimentação Específica (Entrada / Baixa / Perda) */}
+      {isMovementModalOpen && selectedProduct && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-[#121215] border border-zinc-800 rounded-xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-800 mb-4">
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                Registrar Movimentação
+              </h3>
+              <button
+                onClick={() => setIsMovementModalOpen(false)}
+                className="text-zinc-500 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs font-semibold text-amber-400 mb-3">{selectedProduct.name}</p>
+
+            <form onSubmit={handleSaveMovement} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1 uppercase tracking-wider">
+                  Tipo de Operação
+                </label>
+                <select
+                  value={movementType}
+                  onChange={(e) => setMovementType(e.target.value as any)}
+                  className="w-full bg-[#18181B] border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
+                >
+                  <option value="SALE">Saída de Balcão (Venda)</option>
+                  <option value="ENTRY">Entrada de Fornecedor</option>
+                  <option value="LOSS">Quebra / Garrafa Quebrada / Perda</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1 uppercase tracking-wider">
+                  Quantidade ({selectedProduct.unit})
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  value={movementQty}
+                  onChange={(e) => setMovementQty(e.target.value)}
+                  className="w-full bg-[#18181B] border border-zinc-800 rounded-lg px-3.5 py-2 text-white text-xs font-mono focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1 uppercase tracking-wider">
+                  Motivo / Observação (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={movementReason}
+                  onChange={(e) => setMovementReason(e.target.value)}
+                  placeholder="Ex: Mesa 04 / Reposição de freezer"
+                  className="w-full bg-[#18181B] border border-zinc-800 rounded-lg px-3.5 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsMovementModalOpen(false)}
+                  className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-lg text-xs transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold rounded-lg text-xs uppercase tracking-wider transition"
+                >
+                  {isSubmitting ? 'Gravando...' : 'Confirmar'}
                 </button>
               </div>
             </form>
@@ -711,3 +681,5 @@ export const Products: React.FC = () => {
     </div>
   );
 };
+
+export default Products;
