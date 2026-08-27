@@ -9,6 +9,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Clock,
+  ArrowLeft,
   ShoppingCart,
 } from 'lucide-react';
 import {
@@ -59,19 +60,20 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Topo com o Botão de Voltar ao Balcão em Destaque */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#121215] border border-zinc-800/80 p-4 rounded-xl">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">Painel de Desempenho</h1>
-          <p className="text-zinc-500 text-xs md:text-sm mt-0.5">
+          <h1 className="text-xl font-bold text-white tracking-tight">Painel de Desempenho</h1>
+          <p className="text-zinc-500 text-xs mt-0.5">
             Acompanhe os principais indicadores de fluxo do balcão e saúde do estoque
           </p>
         </div>
 
         <button
           onClick={() => navigate('/')}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold rounded-lg text-xs uppercase tracking-wider transition shadow-md shadow-amber-500/10 cursor-pointer"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold rounded-lg text-xs uppercase tracking-wider transition shadow-lg shadow-amber-500/20 cursor-pointer"
         >
+          <ArrowLeft className="w-4 h-4" />
           <ShoppingCart className="w-4 h-4" />
           <span>Voltar ao Balcão / Estoque</span>
         </button>
@@ -143,7 +145,7 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Gráfico de Linha/Área & Movimentações */}
+      {/* Gráficos e Atividades */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-[#121215] border border-zinc-800/80 p-5 rounded-xl">
           <div className="flex items-center justify-between mb-4">
