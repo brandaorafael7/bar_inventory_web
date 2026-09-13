@@ -32,10 +32,8 @@ export const Categories: FC = () => {
     fetchCategories();
   }, []);
 
-  const handleCreateCategory = async (e: FormEvent) => {
+  const handleCreateCategory = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!name.trim()) return;
-
     setIsSubmitting(true);
     try {
       await api.post('/categories', { name, description });
@@ -53,7 +51,7 @@ export const Categories: FC = () => {
     if (!confirm(`Deseja realmente remover a categoria "${catName}"?`)) return;
     try {
       await api.delete(`/categories/${id}`);
-      fetchCategories();
+      await fetchCategories();
     } catch (err: any) {
       alert(err.response?.data?.message || 'Erro ao excluir categoria.');
     }
