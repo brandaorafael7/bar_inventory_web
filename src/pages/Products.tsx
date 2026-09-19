@@ -27,8 +27,8 @@ interface Product {
   barcode?: string;
   category: Category | null;
   dayPrice: number;
-  eventPrice: number;
-  costPrice: number;
+  eventPrice?: number;
+  costPrice?: number;
   currentStock: number;
   minStock: number;
   unit: string;
@@ -51,7 +51,7 @@ export const Products: FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  // Form de Produto (Cadastro / Edição)
+  // Formulário de Produto
   const [name, setName] = useState('');
   const [barcode, setBarcode] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -62,7 +62,7 @@ export const Products: FC = () => {
   const [minStock, setMinStock] = useState('5');
   const [unit, setUnit] = useState('un');
 
-  // Form de Movimentação Rápida de Balcão
+  // Formulário de Movimentação Rápida
   const [movementType, setMovementType] = useState<'SALE' | 'ENTRY' | 'LOSS'>('SALE');
   const [movementQty, setMovementQty] = useState('1');
   const [movementReason, setMovementReason] = useState('');
@@ -93,11 +93,11 @@ export const Products: FC = () => {
       setName(prod.name);
       setBarcode(prod.barcode || '');
       setCategoryId(prod.category?._id || '');
-      setDayPrice(prod.dayPrice.toString());
-      setEventPrice(prod.eventPrice.toString());
-      setCostPrice(prod.costPrice.toString());
-      setCurrentStock(prod.currentStock.toString());
-      setMinStock(prod.minStock.toString());
+      setDayPrice(prod.dayPrice ? prod.dayPrice.toString() : '');
+      setEventPrice(prod.eventPrice ? prod.eventPrice.toString() : '');
+      setCostPrice(prod.costPrice ? prod.costPrice.toString() : '');
+      setCurrentStock(prod.currentStock ? prod.currentStock.toString() : '0');
+      setMinStock(prod.minStock ? prod.minStock.toString() : '5');
       setUnit(prod.unit || 'un');
     } else {
       setSelectedProduct(null);
@@ -118,17 +118,30 @@ export const Products: FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const payload = {
-      name,
-      barcode: barcode || undefined,
-      category: categoryId || undefined,
-      dayPrice: parseFloat(dayPrice) || 0,
-      eventPrice: parseFloat(eventPrice) || 0,
-      costPrice: parseFloat(costPrice) || 0,
+    // Constrói o payload apenas com propriedades estritamente válidas
+    const payload: Record<string, any> = {
+      name: name.trim(),
+      dayPrice: Number(dayPrice) || 0,
       currentStock: parseInt(currentStock, 10) || 0,
       minStock: parseInt(minStock, 10) || 0,
-      unit,
+      unit: unit || 'un',
     };
+
+    if (barcode.trim()) {
+      payload.barcode = barcode.trim();
+    }
+
+    if (categoryId.trim()) {
+      payload.category = categoryId.trim();
+    }
+
+    if (eventPrice.trim() !== '' && !isNaN(Number(eventPrice))) {
+      payload.eventPrice = Number(eventPrice);
+    }
+
+    if (costPrice.trim() !== '' && !isNaN(Number(costPrice))) {
+      payload.costPrice = Number(costPrice);
+    }
 
     try {
       if (selectedProduct) {
@@ -139,14 +152,15 @@ export const Products: FC = () => {
       setIsModalOpen(false);
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erro ao salvar produto.');
+      const msg = err.response?.data?.message;
+      alert(Array.isArray(msg) ? msg.join('\n') : msg || 'Erro ao guardar produto.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteProduct = async (id: string, prodName: string) => {
-    if (!confirm(`Deseja realmente desativar o produto "${prodName}"?`)) return;
+    if (!confirm(`Deseja realmente desactivar o produto "${prodName}"?`)) return;
     try {
       await api.delete(`/products/${id}`);
       fetchData();
@@ -173,21 +187,20 @@ export const Products: FC = () => {
         productId: selectedProduct._id,
         type: movementType,
         quantity: parseInt(movementQty, 10) || 1,
-        reason: movementReason || undefined,
+        reason: movementReason.trim() || undefined,
       });
       setIsMovementModalOpen(false);
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erro ao registrar operação.');
+      alert(err.response?.data?.message || 'Erro ao registar operação.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Venda Rápida de Balcão (1 Clique: -1 un)
   const handleQuickSale = async (prod: Product) => {
     if (prod.currentStock <= 0) {
-      alert('Produto sem estoque disponível!');
+      alert('Produto sem stock disponível!');
       return;
     }
 
@@ -200,14 +213,14 @@ export const Products: FC = () => {
       });
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Erro ao registrar saída.');
+      alert(err.response?.data?.message || 'Erro ao registar saída rápida.');
     }
   };
 
   const filteredProducts = products.filter((p) => {
     const matchesSearch =
       p.name.toLowerCase().includes(search.toLowerCase()) ||
-      (p.barcode && p.barcode.includes(search));
+      Boolean(p.barcode && p.barcode.includes(search));
     const matchesCat = selectedCategory ? p.category?._id === selectedCategory : true;
     const matchesLow = showLowStockOnly ? p.currentStock <= p.minStock : true;
     return matchesSearch && matchesCat && matchesLow;
@@ -243,8 +256,8 @@ export const Products: FC = () => {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome do item ou código de barras..."
-            className="w-full bg-[#121215] border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500"
+            placeholder="Buscar por nome do artigo ou código de barras..."
+            className="w-full bg-[#121215] border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 font-sans"
           />
         </div>
 
@@ -276,22 +289,22 @@ export const Products: FC = () => {
             }`}
           >
             <AlertTriangle className="w-4 h-4 text-amber-500" />
-            <span>Apenas Estoque Baixo</span>
+            <span>Apenas Stock Baixo</span>
           </button>
         </div>
       </div>
 
-      {/* Grid de Balcão / Tabela Unificada */}
+      {/* Tabela de Produtos */}
       <div className="bg-[#121215] border border-zinc-800/80 rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-zinc-300 min-w-[850px]">
             <thead className="bg-[#09090B] text-zinc-400 uppercase border-b border-zinc-800 text-[11px] font-mono tracking-wider">
               <tr>
-                <th className="px-5 py-3.5">Item / Detalhes</th>
+                <th className="px-5 py-3.5">Artigo / Detalhes</th>
                 <th className="px-5 py-3.5">Categoria</th>
                 <th className="px-5 py-3.5 text-right">Preço Dia</th>
                 <th className="px-5 py-3.5 text-right">Preço Evento</th>
-                <th className="px-5 py-3.5 text-center">Nível de Estoque</th>
+                <th className="px-5 py-3.5 text-center">Nível de Stock</th>
                 <th className="px-5 py-3.5 text-center">Saída Rápida</th>
                 {user?.role === 'ADMIN' && <th className="px-5 py-3.5 text-right">Ações</th>}
               </tr>
@@ -300,13 +313,13 @@ export const Products: FC = () => {
               {loading ? (
                 <tr>
                   <td colSpan={7} className="px-5 py-8 text-center text-zinc-500 font-mono">
-                    Carregando estoque do balcão...
+                    A carregar catálogo de produtos...
                   </td>
                 </tr>
               ) : filteredProducts.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-5 py-8 text-center text-zinc-500">
-                    Nenhum produto localizado com os filtros selecionados.
+                    Nenhum produto localizado com os filtros actuais.
                   </td>
                 </tr>
               ) : (
@@ -340,11 +353,11 @@ export const Products: FC = () => {
                       </td>
 
                       <td className="px-5 py-3.5 text-right font-mono font-semibold text-white">
-                        R$ {p.dayPrice.toFixed(2)}
+                        R$ {Number(p.dayPrice || 0).toFixed(2)}
                       </td>
 
                       <td className="px-5 py-3.5 text-right font-mono text-zinc-400">
-                        R$ {p.eventPrice.toFixed(2)}
+                        {p.eventPrice ? `R$ ${Number(p.eventPrice).toFixed(2)}` : '—'}
                       </td>
 
                       <td className="px-5 py-3.5 text-center">
@@ -364,7 +377,6 @@ export const Products: FC = () => {
                         </div>
                       </td>
 
-                      {/* Botão de Saída Rápida (Baixa instantânea de balcão) */}
                       <td className="px-5 py-3.5 text-center">
                         <div className="inline-flex items-center gap-1.5">
                           <button
@@ -379,7 +391,7 @@ export const Products: FC = () => {
 
                           <button
                             onClick={() => handleOpenMovementModal(p, 'SALE')}
-                            title="Registrar quantidade específica"
+                            title="Registar quantidade específica"
                             className="p-1 text-zinc-500 hover:text-zinc-200 bg-zinc-900 border border-zinc-800 rounded-lg hover:border-zinc-700 transition cursor-pointer"
                           >
                             <Plus className="w-3.5 h-3.5" />
@@ -387,13 +399,12 @@ export const Products: FC = () => {
                         </div>
                       </td>
 
-                      {/* Ações Administrativas */}
                       {user?.role === 'ADMIN' && (
                         <td className="px-5 py-3.5 text-right">
                           <div className="inline-flex items-center gap-1">
                             <button
                               onClick={() => handleOpenMovementModal(p, 'ENTRY')}
-                              title="Adicionar Estoque"
+                              title="Adicionar Stock"
                               className="p-1.5 text-emerald-400 hover:bg-emerald-500/10 bg-zinc-900 border border-zinc-800 rounded-lg transition cursor-pointer"
                             >
                               <Plus className="w-3.5 h-3.5" />
@@ -407,7 +418,7 @@ export const Products: FC = () => {
                             </button>
                             <button
                               onClick={() => handleDeleteProduct(p._id, p.name)}
-                              title="Desativar Produto"
+                              title="Desactivar Produto"
                               className="p-1.5 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 bg-zinc-900 border border-zinc-800 rounded-lg transition cursor-pointer"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -424,7 +435,7 @@ export const Products: FC = () => {
         </div>
       </div>
 
-      {/* MODAL: Cadastro / Edição de Produto */}
+      {/* Modal: Cadastro / Edição de Produto */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-[#121215] border border-zinc-800 rounded-xl p-6 w-full max-w-lg shadow-2xl">
@@ -443,15 +454,28 @@ export const Products: FC = () => {
             <form onSubmit={handleSaveProduct} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase tracking-wider">
-                  Nome do Produto *
+                  Nome do Artigo *
                 </label>
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Ex: Cerveja Heineken Long Neck 330ml"
+                  placeholder="Ex: Whisky Jack Daniel's 1L"
                   className="w-full bg-[#18181B] border border-zinc-800 rounded-lg px-3.5 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase tracking-wider">
+                  Código de Barras (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={barcode}
+                  onChange={(e) => setBarcode(e.target.value)}
+                  placeholder="Ex: 7891234567890"
+                  className="w-full bg-[#18181B] border border-zinc-800 rounded-lg px-3.5 py-2 text-white text-xs font-mono focus:outline-none focus:border-amber-500"
                 />
               </div>
 
@@ -549,7 +573,7 @@ export const Products: FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase tracking-wider">
-                    Estoque Inicial / Atual *
+                    Stock Atual *
                   </label>
                   <input
                     type="number"
@@ -563,7 +587,7 @@ export const Products: FC = () => {
 
                 <div>
                   <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase tracking-wider">
-                    Estoque Mínimo (Alerta)
+                    Stock Mínimo
                   </label>
                   <input
                     type="number"
@@ -589,7 +613,7 @@ export const Products: FC = () => {
                   className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold rounded-lg text-xs uppercase tracking-wider transition shadow-md shadow-amber-500/10 cursor-pointer"
                 >
                   <Check className="w-3.5 h-3.5" />
-                  <span>{isSubmitting ? 'Salvando...' : 'Salvar Item'}</span>
+                  <span>{isSubmitting ? 'A guardar...' : 'Guardar Artigo'}</span>
                 </button>
               </div>
             </form>
@@ -597,13 +621,13 @@ export const Products: FC = () => {
         </div>
       )}
 
-      {/* MODAL: Movimentação Específica (Entrada / Baixa / Perda) */}
+      {/* Modal: Registo de Movimentação */}
       {isMovementModalOpen && selectedProduct && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-[#121215] border border-zinc-800 rounded-xl p-6 w-full max-w-sm shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-800 mb-4">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                Registrar Movimentação
+                Registar Movimentação
               </h3>
               <button
                 onClick={() => setIsMovementModalOpen(false)}
@@ -627,7 +651,7 @@ export const Products: FC = () => {
                 >
                   <option value="SALE">Saída de Balcão (Venda)</option>
                   <option value="ENTRY">Entrada de Fornecedor</option>
-                  <option value="LOSS">Quebra / Garrafa Quebrada / Perda</option>
+                  <option value="LOSS">Quebra / Avaria / Perda</option>
                 </select>
               </div>
 
@@ -653,7 +677,7 @@ export const Products: FC = () => {
                   type="text"
                   value={movementReason}
                   onChange={(e) => setMovementReason(e.target.value)}
-                  placeholder="Ex: Mesa 04 / Reposição de freezer"
+                  placeholder="Ex: Mesa 04 / Reposição de expositor"
                   className="w-full bg-[#18181B] border border-zinc-800 rounded-lg px-3.5 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
                 />
               </div>
@@ -671,7 +695,7 @@ export const Products: FC = () => {
                   disabled={isSubmitting}
                   className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold rounded-lg text-xs uppercase tracking-wider transition"
                 >
-                  {isSubmitting ? 'Gravando...' : 'Confirmar'}
+                  {isSubmitting ? 'A registar...' : 'Confirmar'}
                 </button>
               </div>
             </form>
