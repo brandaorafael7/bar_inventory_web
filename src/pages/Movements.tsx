@@ -17,7 +17,7 @@ interface Movement {
     name: string;
     unit: string;
   } | null;
-  type: 'ENTRY' | 'SALE' | 'LOSS' | 'ADJUSTMENT';
+  type: 'ENTRADA' | 'SAIDA' | 'PERDA' | 'AJUSTE';
   quantity: number;
   reason?: string;
   user: {
@@ -61,19 +61,19 @@ export const Movements: FC = () => {
 
   const getBadge = (type: string) => {
     switch (type) {
-      case 'SALE':
+      case 'SAIDA':
         return (
           <span className="inline-flex items-center gap-1.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded text-[11px] font-mono font-medium">
             <TrendingDown className="w-3.5 h-3.5" /> Saída / Venda
           </span>
         );
-      case 'ENTRY':
+      case 'ENTRADA':
         return (
           <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[11px] font-mono font-medium">
             <TrendingUp className="w-3.5 h-3.5" /> Entrada de Estoque
           </span>
         );
-      case 'LOSS':
+      case 'PERDA':
         return (
           <span className="inline-flex items-center gap-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded text-[11px] font-mono font-medium">
             <AlertTriangle className="w-3.5 h-3.5" /> Quebra / Perda
@@ -117,10 +117,10 @@ export const Movements: FC = () => {
             className="bg-[#121215] border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-amber-500"
           >
             <option value="">Todos os Tipos</option>
-            <option value="SALE">Apenas Saídas / Vendas</option>
-            <option value="ENTRY">Apenas Entradas</option>
-            <option value="LOSS">Apenas Quebras / Perdas</option>
-            <option value="ADJUSTMENT">Apenas Ajustes</option>
+            <option value="SAIDA">Apenas Saídas / Vendas</option>
+            <option value="ENTRADA">Apenas Entradas</option>
+            <option value="PERDA">Apenas Quebras / Perdas</option>
+            <option value="AJUSTE">Apenas Ajustes</option>
           </select>
         </div>
       </div>
@@ -158,7 +158,9 @@ export const Movements: FC = () => {
                         <Calendar className="w-3.5 h-3.5 text-zinc-500" />
                         <span>{new Date(mov.createdAt).toLocaleDateString('pt-BR')}</span>
                         <span className="text-zinc-600">•</span>
-                        <span className="text-zinc-300">{new Date(mov.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="text-zinc-300">
+                          {new Date(mov.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
                       </div>
                     </td>
                     <td className="px-5 py-3.5 font-semibold text-white">
@@ -166,8 +168,8 @@ export const Movements: FC = () => {
                     </td>
                     <td className="px-5 py-3.5">{getBadge(mov.type)}</td>
                     <td className="px-5 py-3.5 text-center font-mono font-bold">
-                      <span className={mov.type === 'SALE' || mov.type === 'LOSS' ? 'text-rose-400' : 'text-emerald-400'}>
-                        {mov.type === 'SALE' || mov.type === 'LOSS' ? '-' : '+'}{mov.quantity} {mov.product?.unit || 'un'}
+                      <span className={mov.type === 'SAIDA' || mov.type === 'PERDA' ? 'text-rose-400' : 'text-emerald-400'}>
+                        {mov.type === 'SAIDA' || mov.type === 'PERDA' ? '-' : '+'}{mov.quantity} {mov.product?.unit || 'un'}
                       </span>
                     </td>
                     <td className="px-5 py-3.5">

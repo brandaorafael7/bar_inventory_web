@@ -62,8 +62,8 @@ export const Products: FC = () => {
   const [minStock, setMinStock] = useState('5');
   const [unit, setUnit] = useState('un');
 
-  // Formulário de Movimentação Rápida
-  const [movementType, setMovementType] = useState<'SALE' | 'ENTRY' | 'LOSS'>('SALE');
+  // Formulário de Movimentação Rápida (Sincronizado com o Backend: SAIDA, ENTRADA, PERDA)
+  const [movementType, setMovementType] = useState<'SAIDA' | 'ENTRADA' | 'PERDA'>('SAIDA');
   const [movementQty, setMovementQty] = useState('1');
   const [movementReason, setMovementReason] = useState('');
 
@@ -118,7 +118,6 @@ export const Products: FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Constrói o payload apenas com propriedades estritamente válidas
     const payload: Record<string, any> = {
       name: name.trim(),
       dayPrice: Number(dayPrice) || 0,
@@ -153,14 +152,14 @@ export const Products: FC = () => {
       fetchData();
     } catch (err: any) {
       const msg = err.response?.data?.message;
-      alert(Array.isArray(msg) ? msg.join('\n') : msg || 'Erro ao guardar produto.');
+      alert(Array.isArray(msg) ? msg.join('\n') : msg || 'Erro ao salvar produto.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteProduct = async (id: string, prodName: string) => {
-    if (!confirm(`Deseja realmente desactivar o produto "${prodName}"?`)) return;
+    if (!confirm(`Deseja realmente desativar o produto "${prodName}"?`)) return;
     try {
       await api.delete(`/products/${id}`);
       fetchData();
@@ -169,7 +168,7 @@ export const Products: FC = () => {
     }
   };
 
-  const handleOpenMovementModal = (prod: Product, type: 'SALE' | 'ENTRY' | 'LOSS') => {
+  const handleOpenMovementModal = (prod: Product, type: 'SAIDA' | 'ENTRADA' | 'PERDA') => {
     setSelectedProduct(prod);
     setMovementType(type);
     setMovementQty('1');
@@ -198,16 +197,17 @@ export const Products: FC = () => {
     }
   };
 
+  // Saída Rápida de Balcão (1 Clique: -1 un)
   const handleQuickSale = async (prod: Product) => {
     if (prod.currentStock <= 0) {
-      alert('Produto sem stock disponível!');
+      alert('Produto sem estoque disponível!');
       return;
     }
 
     try {
       await api.post('/stock-movements', {
         productId: prod._id,
-        type: 'SALE',
+        type: 'SAIDA',
         quantity: 1,
         reason: 'Saída rápida no balcão',
       });
@@ -228,7 +228,6 @@ export const Products: FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Cabeçalho */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">Estoque & Balcão</h1>
@@ -248,7 +247,6 @@ export const Products: FC = () => {
         )}
       </div>
 
-      {/* Barra de Filtros e Busca */}
       <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
         <div className="sm:col-span-6 relative">
           <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -256,7 +254,7 @@ export const Products: FC = () => {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome do artigo ou código de barras..."
+            placeholder="Buscar por nome do produto ou código de barras..."
             className="w-full bg-[#121215] border border-zinc-800 rounded-lg pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 font-sans"
           />
         </div>
@@ -289,22 +287,21 @@ export const Products: FC = () => {
             }`}
           >
             <AlertTriangle className="w-4 h-4 text-amber-500" />
-            <span>Apenas Stock Baixo</span>
+            <span>Apenas Estoque Baixo</span>
           </button>
         </div>
       </div>
 
-      {/* Tabela de Produtos */}
       <div className="bg-[#121215] border border-zinc-800/80 rounded-xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-zinc-300 min-w-[850px]">
             <thead className="bg-[#09090B] text-zinc-400 uppercase border-b border-zinc-800 text-[11px] font-mono tracking-wider">
               <tr>
-                <th className="px-5 py-3.5">Artigo / Detalhes</th>
+                <th className="px-5 py-3.5">Produto / Detalhes</th>
                 <th className="px-5 py-3.5">Categoria</th>
                 <th className="px-5 py-3.5 text-right">Preço Dia</th>
                 <th className="px-5 py-3.5 text-right">Preço Evento</th>
-                <th className="px-5 py-3.5 text-center">Nível de Stock</th>
+                <th className="px-5 py-3.5 text-center">Nível de Estoque</th>
                 <th className="px-5 py-3.5 text-center">Saída Rápida</th>
                 {user?.role === 'ADMIN' && <th className="px-5 py-3.5 text-right">Ações</th>}
               </tr>
@@ -313,13 +310,13 @@ export const Products: FC = () => {
               {loading ? (
                 <tr>
                   <td colSpan={7} className="px-5 py-8 text-center text-zinc-500 font-mono">
-                    A carregar catálogo de produtos...
+                    Carregando catálogo de produtos...
                   </td>
                 </tr>
               ) : filteredProducts.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-5 py-8 text-center text-zinc-500">
-                    Nenhum produto localizado com os filtros actuais.
+                    Nenhum produto localizado com os filtros selecionados.
                   </td>
                 </tr>
               ) : (
@@ -390,8 +387,8 @@ export const Products: FC = () => {
                           </button>
 
                           <button
-                            onClick={() => handleOpenMovementModal(p, 'SALE')}
-                            title="Registar quantidade específica"
+                            onClick={() => handleOpenMovementModal(p, 'SAIDA')}
+                            title="Registrar quantidade específica"
                             className="p-1 text-zinc-500 hover:text-zinc-200 bg-zinc-900 border border-zinc-800 rounded-lg hover:border-zinc-700 transition cursor-pointer"
                           >
                             <Plus className="w-3.5 h-3.5" />
@@ -403,8 +400,8 @@ export const Products: FC = () => {
                         <td className="px-5 py-3.5 text-right">
                           <div className="inline-flex items-center gap-1">
                             <button
-                              onClick={() => handleOpenMovementModal(p, 'ENTRY')}
-                              title="Adicionar Stock"
+                              onClick={() => handleOpenMovementModal(p, 'ENTRADA')}
+                              title="Adicionar Estoque"
                               className="p-1.5 text-emerald-400 hover:bg-emerald-500/10 bg-zinc-900 border border-zinc-800 rounded-lg transition cursor-pointer"
                             >
                               <Plus className="w-3.5 h-3.5" />
@@ -418,7 +415,7 @@ export const Products: FC = () => {
                             </button>
                             <button
                               onClick={() => handleDeleteProduct(p._id, p.name)}
-                              title="Desactivar Produto"
+                              title="Desativar Produto"
                               className="p-1.5 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 bg-zinc-900 border border-zinc-800 rounded-lg transition cursor-pointer"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -435,7 +432,6 @@ export const Products: FC = () => {
         </div>
       </div>
 
-      {/* Modal: Cadastro / Edição de Produto */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-[#121215] border border-zinc-800 rounded-xl p-6 w-full max-w-lg shadow-2xl">
@@ -454,7 +450,7 @@ export const Products: FC = () => {
             <form onSubmit={handleSaveProduct} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase tracking-wider">
-                  Nome do Artigo *
+                  Nome do Produto *
                 </label>
                 <input
                   type="text"
@@ -573,7 +569,7 @@ export const Products: FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase tracking-wider">
-                    Stock Atual *
+                    Estoque Atual *
                   </label>
                   <input
                     type="number"
@@ -587,7 +583,7 @@ export const Products: FC = () => {
 
                 <div>
                   <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase tracking-wider">
-                    Stock Mínimo
+                    Estoque Mínimo
                   </label>
                   <input
                     type="number"
@@ -613,7 +609,7 @@ export const Products: FC = () => {
                   className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold rounded-lg text-xs uppercase tracking-wider transition shadow-md shadow-amber-500/10 cursor-pointer"
                 >
                   <Check className="w-3.5 h-3.5" />
-                  <span>{isSubmitting ? 'A guardar...' : 'Guardar Artigo'}</span>
+                  <span>{isSubmitting ? 'Salvando...' : 'Salvar Produto'}</span>
                 </button>
               </div>
             </form>
@@ -621,13 +617,12 @@ export const Products: FC = () => {
         </div>
       )}
 
-      {/* Modal: Registo de Movimentação */}
       {isMovementModalOpen && selectedProduct && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-[#121215] border border-zinc-800 rounded-xl p-6 w-full max-w-sm shadow-2xl">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-800 mb-4">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                Registar Movimentação
+                Registrar Movimentação
               </h3>
               <button
                 onClick={() => setIsMovementModalOpen(false)}
@@ -649,9 +644,9 @@ export const Products: FC = () => {
                   onChange={(e) => setMovementType(e.target.value as any)}
                   className="w-full bg-[#18181B] border border-zinc-800 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
                 >
-                  <option value="SALE">Saída de Balcão (Venda)</option>
-                  <option value="ENTRY">Entrada de Fornecedor</option>
-                  <option value="LOSS">Quebra / Avaria / Perda</option>
+                  <option value="SAIDA">Saída de Balcão (Venda)</option>
+                  <option value="ENTRADA">Entrada de Estoque</option>
+                  <option value="PERDA">Quebra / Avaria / Perda</option>
                 </select>
               </div>
 
@@ -677,7 +672,7 @@ export const Products: FC = () => {
                   type="text"
                   value={movementReason}
                   onChange={(e) => setMovementReason(e.target.value)}
-                  placeholder="Ex: Mesa 04 / Reposição de expositor"
+                  placeholder="Ex: Mesa 04 / Reposição de freezer"
                   className="w-full bg-[#18181B] border border-zinc-800 rounded-lg px-3.5 py-2 text-white text-xs focus:outline-none focus:border-amber-500"
                 />
               </div>
@@ -695,7 +690,7 @@ export const Products: FC = () => {
                   disabled={isSubmitting}
                   className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold rounded-lg text-xs uppercase tracking-wider transition"
                 >
-                  {isSubmitting ? 'A registar...' : 'Confirmar'}
+                  {isSubmitting ? 'Registrando...' : 'Confirmar'}
                 </button>
               </div>
             </form>
